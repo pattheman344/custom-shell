@@ -9,10 +9,15 @@ int main(int argc, char **argv){
     char buff[256];
     char *tokenarr[64];
     char cwd[100];
+    int fd[2];
     int count = 0;
     int status;
-    pid_t p;
+    pid_t p, p2, p3;
+    char *cmd2;
+    int pipe_index;
+    system("clear");
     while(1){
+        cmd2 = NULL;
         count = 0;
         printf("~%s\n", getcwd(cwd, 100));
         printf("> ");
@@ -26,6 +31,9 @@ int main(int argc, char **argv){
             tokens = strtok(NULL, " ");
         }
         tokenarr[count] = NULL;
+        if(tokenarr[0] == NULL){
+            continue;
+        }
         if(strcmp(tokenarr[0], "exit") == 0){
             exit(0);
         } else if(strcmp(tokenarr[0], "cd") == 0){
@@ -36,14 +44,53 @@ int main(int argc, char **argv){
             chdir(tokenarr[1]);
             continue;
         }
-        p = fork();
-        if(p<0){
-            fprintf(stderr, "fork fail");
-        } else if(p == 0){
-            execvp(tokenarr[0], tokenarr);
-        } else{
-            waitpid(p, &status, 0);
+        count = 0;
+        while(tokenarr[count] != NULL){
+            if(strcmp(tokenarr[count], "|") == 0){
+                tokenarr[count] = NULL;
+                cmd2 = tokenarr[count+1];
+                pipe_index = count;
+            }
+            count++;
         }
+        if(cmd2 != NULL){
+            if(pipe(fd) == -1){
+                fprintf(stderr, "pipe fail");
+                return 1;
+            }
+            p = fork();
+            if(p<0){ fprintf(stderr, "fork fail"); exit(1);
+            } else if(p == 0){
+                dup2(fd[1], 1);
+                close(fd[0]);
+                execvp(tokenarr[0], tokenarr);
+            } else{
+                close(fd[1]);
+            }
+            p2 = fork();
+            if(p2<0){ fprintf(stderr, "fork fail"); exit(1);
+            } else if(p2 == 0){
+                dup2(fd[0], 0);
+                close(fd[1]);
+                execvp(cmd2, &tokenarr[pipe_index+1]);
+            } else{
+                close(fd[1]);
+                close(fd[0]);
+                waitpid(p, &status, 0);
+                waitpid(p2, &status, 0);
+            }
+        } else {
+            p3 = fork();
+            if(p3<0){
+                fprintf(stderr, "fork fail");
+                exit(1);
+        } else if(p3 == 0){
+                execvp(tokenarr[0], tokenarr);
+        } else{
+                waitpid(p3, &status, 0);
+        }
+        }
+
     }
         return 0;
 }
