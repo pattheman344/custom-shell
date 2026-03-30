@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdlib.h>
+#include <fcntl.h>
 
 int main(int argc, char **argv){
     char buff[256];
@@ -14,10 +15,12 @@ int main(int argc, char **argv){
     int status;
     pid_t p, p2, p3;
     char *cmd2;
+    char *file1;
     int pipe_index;
     system("clear");
     while(1){
         cmd2 = NULL;
+        file1 = NULL;
         count = 0;
         printf("~%s\n", getcwd(cwd, 100));
         printf("> ");
@@ -50,6 +53,10 @@ int main(int argc, char **argv){
                 tokenarr[count] = NULL;
                 cmd2 = tokenarr[count+1];
                 pipe_index = count;
+            }
+            if(strcmp(tokenarr[count], ">") == 0){
+                tokenarr[count] = NULL;
+                file1 = tokenarr[count+1];
             }
             count++;
         }
@@ -85,6 +92,8 @@ int main(int argc, char **argv){
                 fprintf(stderr, "fork fail");
                 exit(1);
         } else if(p3 == 0){
+                int filefd = open(file1, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                dup2(filefd, 1);
                 execvp(tokenarr[0], tokenarr);
         } else{
                 waitpid(p3, &status, 0);
