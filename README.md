@@ -1,5 +1,5 @@
 # custom-shell
-This is my attempt at making a unix shell in C from scratch, very simple. I made this an ongoing personal project of mine so that I am able to understand Unix process management a bit more.
+This is my attempt at making a unix shell in C from scratch, very simple. I made this as an ongoing personal project of mine so that I am able to understand Unix process management a bit more.
 ____
 ### features:
 - built in commands (cd, exit)
