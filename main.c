@@ -5,6 +5,11 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <signal.h>
+
+void handle_sigchld(int sig){
+    while(waitpid(-1, NULL, WNOHANG) > 0);
+}
 
 int main(int argc, char **argv){
     char buff[256];
@@ -18,13 +23,20 @@ int main(int argc, char **argv){
     char *file1, *file2, *file3;
     int pipe_index;
     int filefd;
+    int backgroundprocess;
     system("clear");
+    struct sigaction sa;
+    sa.sa_handler = handle_sigchld;
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGCHLD, &sa, NULL);
+    
     while(1){
         cmd2 = NULL;
         file1 = NULL;
         file2 = NULL;
         file3 = NULL;
         count = 0;
+        backgroundprocess = 0;
         printf("~%s\n", getcwd(cwd, 100));
         printf("> ");
         fflush(stdout);
@@ -65,6 +77,9 @@ int main(int argc, char **argv){
             } else if(strcmp(tokenarr[count], "<") == 0){
                 tokenarr[count] = NULL;
                 file2 = tokenarr[count+1];
+            } else if(strcmp(tokenarr[count], "&" ) == 0){
+                tokenarr[count] = NULL;
+                backgroundprocess = 1;
             }
             count++;
         }
@@ -125,7 +140,9 @@ int main(int argc, char **argv){
                 }
             } else execvp(tokenarr[0], tokenarr);
         } else{
-                waitpid(p3, &status, 0);
+                if(backgroundprocess){
+                    printf("pid: %d\n", p3);
+                } else waitpid(p3, &status, 0);
         }
         }
 

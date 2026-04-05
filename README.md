@@ -5,6 +5,7 @@ ____
 - built in commands (cd, exit)
 - pipes
 - output, input and append redirection.
+- ability to run background processes using &
 
 ### compilation/execution
 ```bash
@@ -13,7 +14,7 @@ gcc main.c -o main
 ```
 
 ### planning to add later on
-- job control (&, fg, bg)
+- finish off job control (fg, bg)
 - command history
 - variable expansion
 - clean up code (very messy I know)
