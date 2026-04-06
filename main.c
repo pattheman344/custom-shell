@@ -7,8 +7,31 @@
 #include <fcntl.h>
 #include <signal.h>
 
+typedef struct{
+    pid_t pid;
+    char *jobname; 
+} jobs;
+
+jobs arr[64];
+
+int job_count = 0;
+
+char *cmd_history[100];
+int cmd_counter = 0;
+
 void handle_sigchld(int sig){
-    while(waitpid(-1, NULL, WNOHANG) > 0);
+    int x;
+    while((x = waitpid(-1, NULL, WNOHANG)) > 0){
+        for(int i=0; i < job_count; i++){
+            if(arr[i].pid == x){
+                for(int j=i; j < job_count - 1; j++){
+                    arr[j] = arr[j+1];
+                }
+                job_count--;
+            }
+        }
+
+    }
 }
 
 int main(int argc, char **argv){
@@ -40,8 +63,13 @@ int main(int argc, char **argv){
         printf("~%s\n", getcwd(cwd, 100));
         printf("> ");
         fflush(stdout);
-        fgets(buff, sizeof(buff), stdin);
+        if(fgets(buff, sizeof(buff), stdin) == NULL) exit(0);
         buff[strcspn(buff, "\n")] = '\0';
+        if(buff[0] == '\0') continue;
+        if(strcmp(buff, "history") != 0){
+            cmd_history[cmd_counter]= strdup(buff);
+            cmd_counter++;
+        }
         char *tokens = strtok(buff, " ");
         while(tokens != NULL){
             tokenarr[count] = tokens;
@@ -60,6 +88,16 @@ int main(int argc, char **argv){
                 continue;
             }
             chdir(tokenarr[1]);
+            continue;
+        } else if(strcmp(tokenarr[0], "jobs") == 0){
+            for(int i=0; i < job_count; i++){
+                printf("[%d] %d %s\n", i+1, arr[i].pid, arr[i].jobname);
+            }
+            continue;
+        } else if(strcmp(tokenarr[0], "history") == 0){
+            for(int i=0; i < cmd_counter; i++){
+                printf("%d. \"%s\"\n", i+1, cmd_history[i]);
+            }
             continue;
         }
         count = 0;
@@ -94,6 +132,7 @@ int main(int argc, char **argv){
                 dup2(fd[1], 1);
                 close(fd[0]);
                 execvp(tokenarr[0], tokenarr);
+                exit(1);
             } else{
                 close(fd[1]);
             }
@@ -103,6 +142,7 @@ int main(int argc, char **argv){
                 dup2(fd[0], 0);
                 close(fd[1]);
                 execvp(cmd2, &tokenarr[pipe_index+1]);
+                exit(1);
             } else{
                 close(fd[1]);
                 close(fd[0]);
@@ -121,27 +161,36 @@ int main(int argc, char **argv){
                 dup2(filefd, 1);
                 close(filefd);
                 execvp(tokenarr[0], tokenarr);
+                exit(1);
                 }
-            }
+            } else { execvp(tokenarr[0], tokenarr); exit(1); }
             if(file2 != NULL){ // input <
                 filefd = open(file2, O_RDONLY);
                 if(filefd != -1){
                 dup2(filefd, 0);
                 close(filefd);
                 execvp(tokenarr[0], tokenarr);
+                exit(1);
                 }
-            }
+            } else { execvp(tokenarr[0], tokenarr); exit(1); }
             if(file3 != NULL){ // append >>
                 filefd = open(file3, O_WRONLY | O_CREAT | O_APPEND, 0644);
                 if(filefd != -1){
                 dup2(filefd, 1);
                 close(filefd);
                 execvp(tokenarr[0], tokenarr);
+                exit(1);
                 }
-            } else execvp(tokenarr[0], tokenarr);
+            } else {
+                execvp(tokenarr[0], tokenarr);
+                exit(1);
+            }
         } else{
                 if(backgroundprocess){
                     printf("pid: %d\n", p3);
+                    arr[job_count].pid = p3;
+                    arr[job_count].jobname = strdup(tokenarr[0]);
+                    job_count++;
                 } else waitpid(p3, &status, 0);
         }
         }

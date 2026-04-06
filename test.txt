@@ -1,0 +1,3 @@
+"hi"
+~/home/patryk/Desktop/custom-shell
+> 
